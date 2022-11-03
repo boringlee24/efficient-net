@@ -26,6 +26,10 @@ import torchvision.models as models
 import pdb
 
 from efficientnet_pytorch import EfficientNet
+import logging
+from pathlib import Path
+
+os.environ['TORCH_HOME'] = '/work/li.baol/.cache/torch/'
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR',
@@ -85,6 +89,9 @@ best_acc1 = 0
 
 def main():
     args = parser.parse_args()
+    Path(f'logs').mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(filename=f'logs/{args.arch}.log', filemode='w', format='%(levelname)s-%(message)s',
+                        level=logging.INFO)
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -253,8 +260,8 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.evaluate:
         res = validate(val_loader, model, criterion, args)
-        with open('res.txt', 'w') as f:
-            print(res, file=f)
+        # with open('res.txt', 'w') as f:
+        #     print(res, file=f)
         return
 
     # for epoch in range(args.start_epoch, args.epochs):
@@ -337,8 +344,7 @@ def validate(val_loader, model, criterion, args):
 
     # switch to evaluate mode
     model.eval()
-
-    with torch.no_grad():
+    with torch.no_grad():        
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
             if args.gpu is not None:
@@ -363,7 +369,9 @@ def validate(val_loader, model, criterion, args):
                 progress.print(i)
 
         # TODO: this should also be done with the ProgressMeter
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
+        # print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
+        #       .format(top1=top1, top5=top5))
+        logging.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
 
     return top1.avg
@@ -408,7 +416,8 @@ class ProgressMeter(object):
     def print(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries))
+        # print('\t'.join(entries))
+        logging.info('\t'.join(entries))
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
@@ -438,7 +447,6 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
-
 
 if __name__ == '__main__':
     main()
